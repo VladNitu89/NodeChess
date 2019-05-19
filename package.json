@@ -1,0 +1,19 @@
+{
+  "name": "nodechess",
+  "version": "1.0.0",
+  "description": "Chess website with node.js backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VladNitu89/NodeChess.git"
+  },
+  "author": "Vlad Nitu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VladNitu89/NodeChess/issues"
+  },
+  "homepage": "https://github.com/VladNitu89/NodeChess#readme"
+}

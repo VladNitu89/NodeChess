@@ -49,21 +49,40 @@
           let square = $(`[data-row='${i}'][data-col='${j}']`);
           square.empty();
           if (cell !== null) {
-            let piece = `<div class="piece ${(cell.colour === WHITE ? "white" : "black")} ${cell.constructor.name}"></div>`
+            let colour = (cell.colour === WHITE ? "white" : "black");
+            let piece = `<div class="piece ${colour} ${cell.constructor.name}" data-colour="${colour}" data-type="${cell.constructor.name}" onclick="pieceClicked(this)"></div>`
             square.append(piece);
           }
         }
       }
     }
+    let isUserMove = false;
     let origin = null;
     function squareClicked(identifier) {
       let row = $(identifier).data('row');
       let col = $(identifier).data('col');
       if (origin !== null) {
-        executeMove({from: origin, to: {row: row, col: col}});
+        if (pieceType === "King") {
+          if (col - origin.col === 2) {
+            executeMove(KINGSIDE);
+          } else if (origin.col - col === 2) {
+            executeMove(QUEENSIDE);
+          }
+        } else {
+          executeMove({from: origin, to: {row: row, col: col}});
+        }
         origin = null;
+        pieceType = null;
+        pieceColour = null;
+        isUserMove = false;
       } else {
         origin = {row: row, col: col};
+      }
+    }
+    let pieceType = null;
+    function pieceClicked(identifier) {
+      if (pieceType === null) {
+        pieceType = $(identifier).data('type');
       }
     }
     class HumanPlayer {
@@ -71,21 +90,8 @@
         this.colour = colour;
       }
       async selectMove() {
-        let move;
-        $('#submit').click(function(event) {
-          event.preventDefault();
-          let from = $('#from').val();
-          let to = $('#to').val();
-          if (from.val === "0-0") {
-            return KINGSIDE;
-          } else if (from.val === "0-0-0"){
-            return QUEENSIDE;
-          } else {
-            move = {from: {row: from[1] - 1, col: from[0].charCodeAt() - "a".charCodeAt()},
-                    to: {row: to[1] - 1, col: to[0].charCodeAt() - "a".charCodeAt()}};
-          }
-          executeMove(move);
-        });
+        isUserMove = true;
+        console.log("Waiting for user to input move");
       }
     }
     class ComputerPlayer {
@@ -135,7 +141,7 @@
     async function executeMove (move) {
       try {
         if (move === KINGSIDE || move === QUEENSIDE) {
-            game.tryCastle(player.colour, move);
+            game.tryCastle(players[index].colour, move);
         } else {
             game.tryMove(move.from, move.to);
         }

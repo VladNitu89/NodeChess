@@ -41,11 +41,15 @@
         $(this).css("height", $(this).css("width"));
       });
     }
-    function updateBoardGUI(game) {
+    function updateBoardGUI() {
+      let boardLength = 8;
       game.print();
-      for (let i = game.board.length - 1; i >= 0; i--) {
-        for (let j = 0; j < game.board.length; j++) {
-          let cell = game.board[i][j];
+      for (let i = boardLength - 1; i >= 0; i--) {
+        for (let j = 0; j < boardLength; j++) {
+          let cell;
+          $.post('http://localhost:3000/getPiece', {row: i, col: j}, (data) => {
+            cell = data;
+          });
           let square = $(`[data-row='${i}'][data-col='${j}']`);
           square.empty();
           if (cell !== null) {
@@ -98,31 +102,10 @@
       constructor(colour) {
         this.colour = colour;
       }
-      async selectMove(game) {
-        let playerPieces = game.pieces[this.colour];
-        let piece, moves, move, from, to;
-
-        while (true) {
-          let king = playerPieces.find(piece => piece instanceof King);
-          moves = king.possibleMoves();
-          let castle = moves.find(moves => move === QUEENSIDE || moves === KINGSIDE);
-          if (castle !== undefined) {
-              move = castle;
-              break;
-          }
-          piece = playerPieces[Math.floor(Math.random() * playerPieces.length)];
-          moves = piece.possibleMoves();
-
-          if (moves.length > 0) {
-              move = moves[Math.floor(Math.random() * moves.length)];
-              break;
-          }
-        }
-
-        if (move !== KINGSIDE && move !== QUEENSIDE) {
-          move = {from: {row: piece.pos.row, col:piece.pos.col}, to: move};
-        }
-        executeMove(move);
+      async selectMove() {
+        $.post('http://localhost:3000/selectMove', (data) => {
+          executeMove(move);
+        });
       }
     }
     </script>
@@ -130,59 +113,25 @@
     function wait(ms) {
       return new Promise(r => setTimeout(r, ms));
     }
-    let game = new Game();
     let colour = WHITE;
     setupBoardGUI();
-    updateBoardGUI(game);
+    updateBoardGUI();
     let players = [new HumanPlayer(WHITE), new ComputerPlayer(BLACK)];
     let index = 0;
-    players[index].selectMove(game);
+    players[index].selectMove();
 
     async function executeMove (move) {
-      try {
-        if (move === KINGSIDE || move === QUEENSIDE) {
-            game.tryCastle(players[index].colour, move);
-        } else {
-            game.tryMove(move.from, move.to);
-        }
-      } catch (error) {
-        if (error instanceof InvalidMoveError) {
-          players[index].selectMove(game);
-          return;
-        } else {
-          throw error;
-        }
+      let result;
+      $.post('http://localhost:3000/executeMove', move, (data) => { result = data; });
+      if (error instanceof InvalidMoveError) {
+        players[index].selectMove();
+        return;
       }
-      await updateBoardGUI(game);
+      await updateBoardGUI();
       await wait(1000);
-      if (game.isMate(oppositeColour(colour))) {
-        $('#result').html((colour === WHITE ? "white" : "black") + " wins!");
-        //game.printMoves();
-        return;
-      }
-      if (game.isStalemate(oppositeColour(colour))) {
-        $('#result').html("Stalemate");
-        //game.printMoves();
-        return;
-      }
-      if (game.fiftyMoveDraw) {
-        $('#result').html("50 move draw");
-        //game.printMoves();
-        return;
-      }
-      if (game.isRepetition()) {
-        $('#result').html("repetition");
-        //game.printMoves();
-        return;
-      }
-      if (game.isInsufficientMaterial()) {
-        $('#result').html("insufficient material");
-        //game.printMoves();
-        return;
-      }
-
+      $('#result').html(result);
       index = (index + 1) % 2;
-      players[index].selectMove(game);
+      players[index].selectMove();
     }
     </script>
   </body>

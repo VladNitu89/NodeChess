@@ -19,13 +19,12 @@
       </div>
       <span id="result"></span>
     </div>
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
-    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
     integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src="ChessLogic.js"></script>
     <script>
     function setupBoardGUI() {
       let board = '';
@@ -43,20 +42,23 @@
     }
     function updateBoardGUI() {
       let boardLength = 8;
-      game.print();
       for (let i = boardLength - 1; i >= 0; i--) {
         for (let j = 0; j < boardLength; j++) {
-          let cell;
-          $.post('http://localhost:3000/getPiece', {row: i, col: j}, (data) => {
-            cell = data;
+          $.ajax({
+              url: 'http://localhost:3000/getPiece',
+              type: 'POST',
+              data: JSON.stringify({row: i, col: j}),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json',
+              success: async function(cell) {
+                let square = $(`[data-row='${i}'][data-col='${j}']`);
+                square.empty();
+                if (cell) {
+                  let piece = `<div class="piece ${cell.colour} ${cell.name}"></div>`;
+                  square.append(piece);
+                }
+              }
           });
-          let square = $(`[data-row='${i}'][data-col='${j}']`);
-          square.empty();
-          if (cell !== null) {
-            let colour = (cell.colour === WHITE ? "white" : "black");
-            let piece = `<div class="piece ${colour} ${cell.constructor.name}" data-colour="${colour}" data-type="${cell.constructor.name}" onclick="pieceClicked(this)"></div>`
-            square.append(piece);
-          }
         }
       }
     }
@@ -66,72 +68,54 @@
       let row = $(identifier).data('row');
       let col = $(identifier).data('col');
       if (origin !== null) {
-        if (pieceType === "King") {
-          if (col - origin.col === 2) {
-            executeMove(KINGSIDE);
-          } else if (origin.col - col === 2) {
-            executeMove(QUEENSIDE);
-          }
-        } else {
-          executeMove({from: origin, to: {row: row, col: col}});
-        }
+        executeMove({from: origin, to: {row: row, col: col}});
         origin = null;
-        pieceType = null;
-        pieceColour = null;
         isUserMove = false;
       } else {
         origin = {row: row, col: col};
       }
     }
-    let pieceType = null;
-    function pieceClicked(identifier) {
-      if (pieceType === null) {
-        pieceType = $(identifier).data('type');
-      }
-    }
     class HumanPlayer {
-      constructor(colour) {
-        this.colour = colour;
-      }
       async selectMove() {
         isUserMove = true;
         console.log("Waiting for user to input move");
       }
     }
     class ComputerPlayer {
-      constructor(colour) {
-        this.colour = colour;
-      }
       async selectMove() {
-        $.post('http://localhost:3000/selectMove', (data) => {
-          executeMove(move);
-        });
+        $.post('http://localhost:3000/selectMove', (move) => { executeMove(move); });
       }
     }
     </script>
     <script>
-    function wait(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
-    let colour = WHITE;
     setupBoardGUI();
     updateBoardGUI();
-    let players = [new HumanPlayer(WHITE), new ComputerPlayer(BLACK)];
+    let players = [new HumanPlayer(), new ComputerPlayer()];
     let index = 0;
     players[index].selectMove();
 
     async function executeMove (move) {
-      let result;
-      $.post('http://localhost:3000/executeMove', move, (data) => { result = data; });
-      if (error instanceof InvalidMoveError) {
-        players[index].selectMove();
-        return;
-      }
-      await updateBoardGUI();
-      await wait(1000);
-      $('#result').html(result);
-      index = (index + 1) % 2;
-      players[index].selectMove();
+      $.ajax({
+          url: 'http://localhost:3000/executeMove',
+          type: 'POST',
+          data: JSON.stringify({'move': move}),
+          contentType: 'application/json; charset=utf-8',
+          dataType: 'json',
+          success: async function(response) {
+            if (response.error) {
+              console.log(response.error);
+              players[index].selectMove();
+              return;
+            }
+            await updateBoardGUI();
+            if (response.result) {
+              $('#result').html(response.result);
+            } else {
+              index = (index + 1) % 2;
+              players[index].selectMove();
+            }
+          }
+      });
     }
     </script>
   </body>

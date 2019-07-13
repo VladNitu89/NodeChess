@@ -27,7 +27,7 @@ class Pawn {
                 return null;
             }
             if (rowDifference === 1 && Math.abs(dest.col - this.pos.col) === 1 &&
-                dest === this.game.enpassantSquare) {
+                (this.game.enpassantSquare && dest.row === this.game.enpassantSquare.row && dest.col === this.game.enpassantSquare.col)) {
                 return board[this.pos.row][dest.col];
             }
             return false;
@@ -77,7 +77,7 @@ class Pawn {
                     moves.push(dest);
                 }
             }
-            if (dest === this.game.enpassantSquare) {
+            if (this.game.enpassantSquare && dest.row === this.game.enpassantSquare.row && dest.col === this.game.enpassantSquare.col) {
                 if (!this.game.moveResultsInCheck(this.pos, dest, board[this.pos.row][dest.col])) {
                     moves.push(dest);
                 }
@@ -91,7 +91,7 @@ class Pawn {
                     moves.push(dest);
                 }
             }
-            if (dest === this.game.enpassantSquare) {
+            if (this.game.enpassantSquare && dest.row === this.game.enpassantSquare.row && dest.col === this.game.enpassantSquare.col) {
                 if (!this.game.moveResultsInCheck(this.pos, dest, board[this.pos.row][dest.col])) {
                     moves.push(dest);
                 }
@@ -923,6 +923,7 @@ class Game {
         }
     }
     tryMove({from, to}) {
+      console.log(this.enpassantSquare);
       let piece = this.board[from.row][from.col];
       if (piece instanceof King && to.col - from.col === 2) {
         this.tryCastle(piece.colour, KINGSIDE);
